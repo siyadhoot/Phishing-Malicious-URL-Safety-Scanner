@@ -1,0 +1,148 @@
+{
+  "cleaning": {
+    "conflicting_urls_removed": 1,
+    "exact_duplicate_rows_removed": 0,
+    "invalid_label_rows_removed": 0,
+    "invalid_url_rows_removed": 18,
+    "label_counts": {
+      "0": 100041,
+      "1": 134849
+    },
+    "missing_or_blank_rows_removed": 0,
+    "repeated_same_label_urls_removed": 885,
+    "rows_loaded": 235795,
+    "rows_retained": 234890
+  },
+  "dataset": "phishing_urls.csv",
+  "dataset_sha256": "c03cfe13d32a600eb58404f9964c8a3b061b75f705364195d75ff0ef53b712f2",
+  "feature_columns": [
+    "url_length",
+    "hostname_length",
+    "dot_count",
+    "hyphen_count",
+    "at_count",
+    "question_count",
+    "equal_count",
+    "slash_count",
+    "digit_count",
+    "special_char_count",
+    "has_ip_address",
+    "has_https",
+    "subdomain_count",
+    "suspicious_word_count",
+    "has_punycode",
+    "has_encoded_chars"
+  ],
+  "held_out_test": {
+    "accuracy": 0.9659415045340372,
+    "confusion_matrix_order": [
+      "phishing",
+      "legitimate"
+    ],
+    "confusion_matrix_phishing_then_legitimate": [
+      [
+        9393,
+        611
+      ],
+      [
+        189,
+        13296
+      ]
+    ],
+    "f1": 0.9591544981108956,
+    "false_positive_rate": 0.014015572858731925,
+    "precision": 0.980275516593613,
+    "recall": 0.9389244302279088,
+    "roc_auc": 0.9864889750440201
+  },
+  "label_mapping": {
+    "0": "phishing",
+    "1": "legitimate"
+  },
+  "limitation": "Features are computed from URL strings only. URL-only performance on this dataset does not establish real-world reliability or current threat coverage.",
+  "random_state": 42,
+  "rows": 234890,
+  "scikit_learn_version": "1.9.1",
+  "selected_model": "Histogram gradient boosting",
+  "selection_metric": "validation phishing-class F1; precision then model name break ties",
+  "split_method": "StratifiedGroupKFold: 10 outer folds for test, then 9 folds within the remainder for validation; exact hostname groups (www prefix removed) do not cross splits. Ratios are approximately 80/10/10.",
+  "split_sizes": {
+    "test": 23489,
+    "train": 187912,
+    "validation": 23489
+  },
+  "validation_candidates": [
+    {
+      "accuracy": 0.5740985141981353,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          0,
+          10004
+        ],
+        [
+          0,
+          13485
+        ]
+      ],
+      "f1": 0.0,
+      "false_positive_rate": 0.0,
+      "model": "Prior baseline",
+      "precision": 0.0,
+      "recall": 0.0,
+      "roc_auc": 0.5,
+      "stage": "validation"
+    },
+    {
+      "accuracy": 0.9520626676316574,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          9086,
+          918
+        ],
+        [
+          208,
+          13277
+        ]
+      ],
+      "f1": 0.9416519846616229,
+      "false_positive_rate": 0.01542454579162032,
+      "model": "Logistic regression",
+      "precision": 0.9776199698730363,
+      "recall": 0.9082367053178728,
+      "roc_auc": 0.9806573217950492,
+      "stage": "validation"
+    },
+    {
+      "accuracy": 0.9677295755460003,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          9420,
+          584
+        ],
+        [
+          174,
+          13311
+        ]
+      ],
+      "f1": 0.9613225839371364,
+      "false_positive_rate": 0.012903225806451613,
+      "model": "Histogram gradient boosting",
+      "precision": 0.981863664790494,
+      "recall": 0.9416233506597361,
+      "roc_auc": 0.9872328191452377,
+      "stage": "validation"
+    }
+  ]
+}

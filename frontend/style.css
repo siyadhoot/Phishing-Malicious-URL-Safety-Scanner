@@ -52,9 +52,8 @@ input::placeholder { color: #989e99; }
 .result-eyebrow { margin-bottom: .42rem; }
 .result h2 { margin: 0; max-width: 360px; font-size: 1.75rem; line-height: 1.16; letter-spacing: -.045em; }
 .verdict-tag { padding: .36rem .55rem; border: 1px solid currentColor; color: var(--muted); font-size: .65rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
-.result[data-verdict="phishing"], .result[data-verdict="malicious"] { --verdict-color: var(--red); }
+.result[data-verdict="phishing"] { --verdict-color: var(--red); }
 .result[data-verdict="legitimate"] { --verdict-color: var(--green); }
-.result[data-verdict="uncertain"] { --verdict-color: var(--amber); }
 .result[data-verdict] .verdict-tag { color: var(--verdict-color); }
 .result-summary { margin: .85rem 0 0; color: #5e6661; font-size: .85rem; line-height: 1.65; overflow-wrap: anywhere; }
 .confidence { margin-top: 1rem; padding-top: .8rem; display: flex; justify-content: space-between; border-top: 1px solid var(--line); color: var(--muted); font-size: .77rem; }

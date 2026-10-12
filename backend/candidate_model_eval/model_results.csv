@@ -1,0 +1,4 @@
+stage,model,accuracy,precision,recall,f1,roc_auc,false_positive_rate,confusion_matrix_phishing_then_legitimate,confusion_matrix_order
+validation,Prior baseline,0.5740985141981353,0.0,0.0,0.0,0.5,0.0,"[[0, 10004], [0, 13485]]","['phishing', 'legitimate']"
+validation,Logistic regression,0.9520626676316574,0.9776199698730363,0.9082367053178728,0.9416519846616229,0.9806573217950492,0.01542454579162032,"[[9086, 918], [208, 13277]]","['phishing', 'legitimate']"
+validation,Histogram gradient boosting,0.9677295755460003,0.981863664790494,0.9416233506597361,0.9613225839371364,0.9872328191452377,0.012903225806451613,"[[9420, 584], [174, 13311]]","['phishing', 'legitimate']"

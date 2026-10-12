@@ -1,0 +1,144 @@
+{
+  "cleaning": {
+    "conflicting_urls_removed": 0,
+    "exact_duplicate_rows_removed": 0,
+    "invalid_label_rows_removed": 0,
+    "invalid_url_rows_removed": 18,
+    "label_counts": {
+      "0": 100502,
+      "1": 134850
+    },
+    "missing_or_blank_rows_removed": 0,
+    "repeated_same_label_urls_removed": 425,
+    "rows_loaded": 235795,
+    "rows_retained": 235352
+  },
+  "dataset": "phishing_urls.csv",
+  "dataset_sha256": "c03cfe13d32a600eb58404f9964c8a3b061b75f705364195d75ff0ef53b712f2",
+  "feature_columns": [
+    "url_length",
+    "hostname_length",
+    "dot_count",
+    "hyphen_count",
+    "at_count",
+    "question_count",
+    "equal_count",
+    "slash_count",
+    "digit_count",
+    "special_char_count",
+    "has_ip_address",
+    "has_https",
+    "subdomain_count",
+    "suspicious_word_count",
+    "has_punycode",
+    "has_encoded_chars"
+  ],
+  "held_out_test": {
+    "accuracy": 0.9951136605056299,
+    "confusion_matrix_order": [
+      "phishing",
+      "legitimate"
+    ],
+    "confusion_matrix_phishing_then_legitimate": [
+      [
+        9945,
+        105
+      ],
+      [
+        10,
+        13475
+      ]
+    ],
+    "f1": 0.9942514371407148,
+    "precision": 0.9989954796584631,
+    "recall": 0.9895522388059701,
+    "roc_auc": 0.9983271185784094
+  },
+  "label_mapping": {
+    "0": "phishing",
+    "1": "legitimate"
+  },
+  "limitation": "Features are computed from URL strings only. URL-only performance on this dataset does not establish real-world reliability or current threat coverage.",
+  "random_state": 42,
+  "rows": 235352,
+  "scikit_learn_version": "1.9.1",
+  "selected_model": "Histogram gradient boosting",
+  "selection_metric": "validation phishing-class F1; precision then model name break ties",
+  "split_method": "StratifiedGroupKFold: 10 outer folds for test, then 9 folds within the remainder for validation; exact hostname groups (www prefix removed) do not cross splits. Ratios are approximately 80/10/10.",
+  "split_sizes": {
+    "test": 23535,
+    "train": 188282,
+    "validation": 23535
+  },
+  "validation_candidates": [
+    {
+      "accuracy": 0.5729764181007011,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          0,
+          10050
+        ],
+        [
+          0,
+          13485
+        ]
+      ],
+      "f1": 0.0,
+      "model": "Prior baseline",
+      "precision": 0.0,
+      "recall": 0.0,
+      "roc_auc": 0.5,
+      "stage": "validation"
+    },
+    {
+      "accuracy": 0.992989165073295,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          9888,
+          162
+        ],
+        [
+          3,
+          13482
+        ]
+      ],
+      "f1": 0.9917255904919513,
+      "model": "Logistic regression",
+      "precision": 0.9996966939642099,
+      "recall": 0.9838805970149254,
+      "roc_auc": 0.99523364637694,
+      "stage": "validation"
+    },
+    {
+      "accuracy": 0.9957085192266837,
+      "confusion_matrix_order": [
+        "phishing",
+        "legitimate"
+      ],
+      "confusion_matrix_phishing_then_legitimate": [
+        [
+          9955,
+          95
+        ],
+        [
+          6,
+          13479
+        ]
+      ],
+      "f1": 0.9949527759732147,
+      "model": "Histogram gradient boosting",
+      "precision": 0.9993976508382693,
+      "recall": 0.9905472636815921,
+      "roc_auc": 0.9976756410753057,
+      "stage": "validation"
+    }
+  ]
+}

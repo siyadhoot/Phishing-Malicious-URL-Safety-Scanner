@@ -1,11 +1,19 @@
 
-from flask import Flask, request, jsonify
+from threading import Lock
+import os
+
+from flask import Flask, request, jsonify, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from backend.security import validate_url, analyze_url
+from backend.security import normalize_url, analyze_url
+from backend.model import load_model, predict_url
+from backend.policy import matching_demo_domain
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../frontend", static_url_path="")
+app.config["DEMO_PHISHING_DOMAINS"] = os.environ.get(
+    "DEMO_PHISHING_DOMAINS", "example.com"
+)
 
 limiter = Limiter(
     get_remote_address,
@@ -31,6 +39,32 @@ def health():
     }), 200
 
 
+@app.get("/")
+def index():
+    return send_from_directory(app.static_folder, "index.html")
+
+
+_model_lock = Lock()
+_model = None
+_model_load_error = None
+_model_load_attempted = False
+
+
+def get_model():
+    """Load the serialized classifier once per application process."""
+    global _model, _model_load_error, _model_load_attempted
+    with _model_lock:
+        if not _model_load_attempted:
+            _model_load_attempted = True
+            try:
+                _model = load_model()
+            except Exception as error:
+                _model_load_error = error
+        if _model_load_error is not None:
+            raise RuntimeError("The URL classifier could not be loaded") from _model_load_error
+        return _model
+
+
 @app.post("/scan")
 @limiter.limit("10 per minute")
 def scan_url():
@@ -43,34 +77,59 @@ def scan_url():
 
     url = data.get("url")
 
-    valid, error = validate_url(url)
-
-    if not valid:
-        return jsonify({"error": error}), 400
+    try:
+        normalized_url = normalize_url(url)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
     try:
-        analysis = analyze_url(url)
+        model = get_model()
+        result = predict_url(normalized_url, model=model)
+        analysis = analyze_url(normalized_url)
+        model_prediction = result["prediction"]
+        model_phishing_probability = float(result["phishing_probability"])
+        if model_prediction not in ("phishing", "legitimate"):
+            raise ValueError("Model returned an unsupported prediction")
+        if not 0 <= model_phishing_probability <= 1:
+            raise ValueError("Model returned an invalid probability")
 
-        # Temporary rule-based classification for development.
-        # This is a basic heuristic, not a trained ML model.
-        indicators = analysis["indicators"]
-
-        suspicious_count = len(indicators)
-
-        if suspicious_count >= 2:
-            prediction = "phishing"
-        else:
-            prediction = "legitimate"
+        matched_domain = matching_demo_domain(
+            normalized_url, app.config["DEMO_PHISHING_DOMAINS"]
+        )
+        policy_override = matched_domain is not None
+        verdict = "phishing" if policy_override else model_prediction
+        verdict_source = "team_rule" if policy_override else "ml_model"
+        confidence = None if policy_override else (
+            model_phishing_probability if model_prediction == "phishing"
+            else 1 - model_phishing_probability
+        )
+        policy_reason = (
+            f"The application flagged the domain {matched_domain} because it matches a team-configured "
+            "demonstration rule. This is not an independent determination that the "
+            "website is malicious."
+            if policy_override else None
+        )
 
         return jsonify({
-            "url": url.strip(),
-            "prediction": prediction,
+            "url": normalized_url,
+            "normalized_url": normalized_url,
+            "prediction": model_prediction,
+            "model_prediction": model_prediction,
+            "verdict": verdict,
+            "confidence": confidence,
+            "phishing_probability": model_phishing_probability,
+            "model_phishing_probability": model_phishing_probability,
+            "verdict_source": verdict_source,
+            "policy_override": policy_override,
+            "policy_reason": policy_reason,
+            "summary": policy_reason or (
+                f"The model classifies this URL as {model_prediction}. This is an uncalibrated model estimate, "
+                "not a guarantee; the scanner can make mistakes."
+            ),
+            "indicators": analysis["indicators"],
             "analysis": analysis,
-            "model_mode": "rule_based",
-            "warning": (
-                "Preliminary rule-based result only. "
-                "This does not guarantee that a URL is safe."
-            )
+            "features": result["features"],
+            "model_mode": "ml"
         }), 200
 
     except Exception:
