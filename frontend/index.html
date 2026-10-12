@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171b1a">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <title>Nightwatch — URL Safety Scanner</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to scanner</a>
+  <header class="topbar">
+    <a class="brand" href="#main" aria-label="Nightwatch home">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span>nightwatch</span>
+    </a>
+    <span class="topnote">A second look at every link.</span>
+  </header>
+
+  <main id="main" class="page-shell">
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> LINK SAFETY CHECK</p>
+      <h1 id="page-title">Pause before  
+<span>you proceed.</span></h1>
+      <p class="lede">Check a link for signs of phishing or malicious activity before you open it.</p>
+    </section>
+
+    <section class="scanner" aria-label="URL scanner">
+      <form id="scan-form" novalidate>
+        <label for="url-input">URL to check</label>
+        <div class="input-row">
+          <input id="url-input" name="url" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://example.com" aria-describedby="url-help url-error" required>
+          <button id="scan-button" type="submit"><span>Scan URL</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+        </div>
+        <p id="url-help" class="field-help">Enter a complete web address, including https://</p>
+        <p id="url-error" class="field-error" role="alert" hidden></p>
+      </form>
+
+      <p id="scan-status" class="scan-status" role="status" aria-live="polite"></p>
+      <section id="result" class="result" aria-labelledby="result-heading" hidden>
+        <div class="result-rule" aria-hidden="true"></div>
+        <div class="result-heading-row">
+          <div>
+            <p class="eyebrow result-eyebrow">SCAN RESULT</p>
+            <h2 id="result-heading" tabindex="-1"></h2>
+          </div>
+          <span id="verdict-tag" class="verdict-tag"></span>
+        </div>
+        <p id="result-summary" class="result-summary"></p>
+        <div id="confidence-wrap" class="confidence" hidden><span>Confidence</span><strong id="confidence-value"></strong></div>
+        <div id="indicators-wrap" class="indicators-wrap" hidden>
+          <h3>Signals found</h3>
+          <ul id="indicators"></ul>
+        </div>
+        <button id="scan-again" class="text-button" type="button">Check another URL <span aria-hidden="true">↗</span></button>
+      </section>
+      <p class="privacy-note"><span aria-hidden="true">↗</span> We check the address you enter. We do not open the link.</p>
+    </section>
+
+    <aside class="caution"><span class="caution-mark" aria-hidden="true">i</span><p>No automated check can guarantee a link is safe. If something feels wrong, don’t open it.</p></aside>
+  </main>
+  <footer class="footer"><span>Nightwatch <span aria-hidden="true">/</span> Stay curious. Stay cautious.</span><span id="mode-label" class="mode-label"></span></footer>
+</body>
+</html>
