@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from security import validate_url, analyze_url
+from backend.security import validate_url, analyze_url
 
 app = Flask(__name__)
 

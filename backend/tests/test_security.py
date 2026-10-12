@@ -1,5 +1,5 @@
 
-from security import validate_url, analyze_url
+from backend.security import validate_url, analyze_url
 
 
 def test_valid_https_url():
