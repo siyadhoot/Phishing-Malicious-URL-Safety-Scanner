@@ -1,15 +1,21 @@
-name: CI
+
+name: CI/CD - Phishing URL Safety Scanner
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: phishing-scanner-deployment
+  cancel-in-progress: false
+
 jobs:
-  test-and-build:
+  test-build-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +35,9 @@ jobs:
           node-version: "22"
 
       - name: Install Python dependencies
-        run: python -m pip install -r backend/requirements.txt pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt pytest
 
       - name: Run backend tests
         run: python -m pytest -q backend/tests
@@ -37,5 +45,176 @@ jobs:
       - name: Run frontend tests
         run: node --test frontend/script.test.js
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build Docker image
-        run: docker build -t phishing-url-safety-scanner:ci .
+        run: |
+          docker build \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/phishing-url-safety-scanner:${GITHUB_SHA}" \
+            -t "${{ secrets.DOCKERHUB_USERNAME }}/phishing-url-safety-scanner:latest" \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/phishing-url-safety-scanner:${GITHUB_SHA}"
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}/phishing-url-safety-scanner:latest"
+
+  deploy-to-ec2:
+    needs: test-build-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 with health check and rollback
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/phishing-url-safety-scanner
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DOCKERHUB_IMAGE,IMAGE_TAG
+          command_timeout: 5m
+          script: |
+            set -Eeuo pipefail
+
+            CONTAINER="phishing-scanner"
+            BACKUP="phishing-scanner-previous"
+            CANDIDATE="phishing-scanner-candidate"
+            ENV_FILE="/tmp/phishing-scanner-deploy.env"
+            IMAGE="${DOCKERHUB_IMAGE}:${IMAGE_TAG}"
+
+            cleanup() {
+              rm -f "$ENV_FILE"
+              docker rm -f "$CANDIDATE" >/dev/null 2>&1 || true
+              docker logout >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+
+            wait_for_healthy() {
+              local name="$1"
+              local status=""
+
+              for i in $(seq 1 60); do
+                status="$(docker inspect \
+                  --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                  "$name" 2>/dev/null || true)"
+
+                if [ "$status" = "healthy" ]; then
+                  return 0
+                fi
+
+                if [ "$status" = "unhealthy" ] || [ "$status" = "none" ]; then
+                  docker logs --tail 80 "$name" || true
+                  return 1
+                fi
+
+                sleep 2
+              done
+
+              docker logs --tail 80 "$name" || true
+              return 1
+            }
+
+            rollback() {
+              echo "Deployment failed. Attempting rollback..."
+
+              docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+
+              if docker inspect "$BACKUP" >/dev/null 2>&1; then
+                docker rename "$BACKUP" "$CONTAINER"
+                docker start "$CONTAINER"
+                wait_for_healthy "$CONTAINER" || {
+                  echo "WARNING: Previous container did not become healthy."
+                  docker logs --tail 100 "$CONTAINER" || true
+                }
+              fi
+            }
+
+            # Recover a previous container if an earlier deployment was interrupted.
+            if ! docker inspect "$CONTAINER" >/dev/null 2>&1 &&
+               docker inspect "$BACKUP" >/dev/null 2>&1; then
+              docker rename "$BACKUP" "$CONTAINER"
+              docker start "$CONTAINER"
+            fi
+
+            # Preserve the current application's runtime environment.
+            if ! docker inspect "$CONTAINER" >/dev/null 2>&1; then
+              echo "ERROR: Existing container $CONTAINER was not found."
+              exit 1
+            fi
+
+            docker inspect "$CONTAINER" \
+              --format '{{range .Config.Env}}{{println .}}{{end}}' \
+              > "$ENV_FILE"
+            chmod 600 "$ENV_FILE"
+
+            # Authenticate and download the exact image built by this workflow.
+            printf '%s' "$DOCKERHUB_TOKEN" |
+              docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            docker pull "$IMAGE"
+
+            # Remove a stale backup only when the current container exists.
+            docker rm -f "$BACKUP" >/dev/null 2>&1 || true
+
+            # Start a candidate on port 5001 without stopping the live app.
+            docker rm -f "$CANDIDATE" >/dev/null 2>&1 || true
+            docker run -d \
+              --name "$CANDIDATE" \
+              --env-file "$ENV_FILE" \
+              -p 5001:5000 \
+              "$IMAGE"
+
+            if ! wait_for_healthy "$CANDIDATE"; then
+              echo "Candidate container failed its Docker health check."
+              exit 1
+            fi
+
+            # Also verify the HTTP health endpoint from the EC2 host.
+            if ! curl --fail --silent --show-error --max-time 5 \
+              http://127.0.0.1:5001/health; then
+              echo "Candidate HTTP health endpoint failed."
+              exit 1
+            fi
+
+            echo "Candidate passed health checks."
+
+            # Replace the existing container.
+            docker rm -f "$CANDIDATE"
+            docker rename "$CONTAINER" "$BACKUP"
+            docker stop "$BACKUP"
+
+            if ! docker run -d \
+              --name "$CONTAINER" \
+              --restart unless-stopped \
+              --env-file "$ENV_FILE" \
+              -p 5000:5000 \
+              "$IMAGE"; then
+              rollback
+              exit 1
+            fi
+
+            # Keep the old container until the new one is healthy.
+            if ! wait_for_healthy "$CONTAINER"; then
+              rollback
+              exit 1
+            fi
+
+            if ! curl --fail --silent --show-error --max-time 5 \
+              http://127.0.0.1:5000/health; then
+              rollback
+              exit 1
+            fi
+
+            # Deployment succeeded; remove the old container.
+            docker rm -f "$BACKUP"
+            echo "Deployment successful: $IMAGE"
